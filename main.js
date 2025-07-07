@@ -26,6 +26,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const selectedSample = document.getElementById("sampleSelect").value;
         playSample(selectedSample);
     });
+    const startStopButton = document.getElementById("startStopButton");
+    let isPlaying = false;
 
     document.getElementById("scanNFCButton").addEventListener("click", async () => {
         await initNFC((json) => {
