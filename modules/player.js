@@ -3,6 +3,7 @@ import { log } from './logger.js';
 let player;
 export let effectChain = [];
 export let effectMap = {};
+let currentSampleUrl = null;
 
 export function initPlayer() {
     log("Player initialized.");
@@ -13,6 +14,8 @@ export function playSample(url) {
         player.stop();
         player.dispose();
     }
+
+    currentSampleUrl = url; // Track the currently loaded sample
 
     player = new Tone.Player({
         url: url,
@@ -28,4 +31,8 @@ export function playSample(url) {
     lastNode.connect(Tone.Destination);
 
     log(`Playing sample (looping): ${url}`);
+}
+
+export function getCurrentSample() {
+    return currentSampleUrl;
 }
