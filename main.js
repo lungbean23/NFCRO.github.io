@@ -1,5 +1,5 @@
 import { initLogger, log } from './modules/logger.js';
-import { initPlayer, playSample, getCurrentSample } from './modules/player.js';
+import { initPlayer, playSample, stopSample, getCurrentSample } from './modules/player.js';
 import { handleModule } from './modules/effects.js';
 import { initNFC } from './modules/nfc.js';
 
@@ -22,12 +22,23 @@ window.addEventListener("DOMContentLoaded", () => {
         log("Tone.js AudioContext started.");
     });
 
-    document.getElementById("playButton").addEventListener("click", () => {
-        const selectedSample = document.getElementById("sampleSelect").value;
-        playSample(selectedSample);
-    });
     const startStopButton = document.getElementById("startStopButton");
     let isPlaying = false;
+
+    startStopButton.addEventListener("click", () => {
+        const selectedSample = document.getElementById("sampleSelect").value;
+        if (!isPlaying) {
+            playSample(selectedSample);
+            log("Sample started.");
+            startStopButton.textContent = "Stop Sample";
+            isPlaying = true;
+        } else {
+            stopSample();
+            log("Sample stopped.");
+            startStopButton.textContent = "Start Sample";
+            isPlaying = false;
+        }
+    });
 
     document.getElementById("scanNFCButton").addEventListener("click", async () => {
         await initNFC((json) => {
