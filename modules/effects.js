@@ -52,12 +52,32 @@ export function handleModule(json) {
             effectChain.push(effect);
         }
     }
+
+    else if (json.class === "incrementer" && json.parameter === "masterWet") {
+        const step = json.step || 0.05;
+        let updatedCount = 0;
+        for (let moduleName in effectMap) {
+            const effect = effectMap[moduleName];
+            if (effect.wet && typeof effect.wet.value === "number") {
+                let newWet = effect.wet.value + step;
+                newWet = Math.min(newWet, 1); // Clamp to max 1
+                effect.wet.value = newWet;
+                updatedCount++;
+                log(`Increased ${moduleName}.wet to ${newWet.toFixed(2)}`);
+            }
+        }
+        if (updatedCount === 0) {
+            log("No active effects with a wet parameter to increment.");
+        }
+    }
+
     else if (json.action === "clear") {
         effectChain.forEach(effect => effect.dispose());
         effectChain.length = 0;
         Object.keys(effectMap).forEach(key => delete effectMap[key]);
         log("Effect chain cleared.");
     }
+
     else {
         log(`Unknown or missing action: ${json.action}. Passing through without change.`);
     }
