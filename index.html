@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>NFC Modular SPA</title>
+</head>
+<body>
+    <h1>NFC Modular Rack</h1>
+
+    <button id="startButton">Start Audio</button>
+    <button id="scanNFCButton">Scan NFC</button>
+
+    <pre id="status">Status: Idle</pre>
+
+    <script src="https://unpkg.com/tone@next/build/Tone.js"></script>
+    <script>
+document.getElementById("startButton").addEventListener("click", async () => {
+    await Tone.start();
+    log("Tone.js AudioContext started.");
+});
+
+document.getElementById("scanNFCButton").addEventListener("click", async () => {
+    if ("NDEFReader" in window) {
+        try {
+            const reader = new NDEFReader();
+            await reader.scan();
+            log("NFC scan started. Tap a tag...");
+
+            reader.onreading = event => {
+                const decoder = new TextDecoder();
+                for (const record of event.message.records) {
+                    const data = decoder.decode(record.data);
+                    log(`NFC Tag Read: ${data}`);
+
+                    try {
+                        const json = JSON.parse(data);
+                        handleModule(json);
+                    } catch (e) {
+                        log(`Error parsing JSON: ${e}`);
+                    }
+                }
+            };
+
+        } catch (error) {
+            log(`NFC scan failed: ${error}`);
+        }
+    } else {
+        log("Web NFC not supported in this browser.");
+    }
+});
+
+function handleModule(json) {
+    if (json.type === "oscillator") {
+        const freq = json.frequency || 440;
+        const waveform = json.waveform || "sine";
+        const osc = new Tone.Oscillator(freq, waveform).toDestination();
+        osc.start();
+        log(`Oscillator started: ${waveform} at ${freq}Hz`);
+
+        // For testing, stop after 5 seconds
+        setTimeout(() => {
+            osc.stop();
+            log(`Oscillator stopped.`);
+        }, 5000);
+    } else {
+        log(`Unknown module type: ${json.type}`);
+    }
+}
+
+function log(msg) {
+    document.getElementById("status").textContent += `\n${msg}`;
+}
+    </script>
+</body>
+</html>
