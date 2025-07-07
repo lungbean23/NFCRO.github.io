@@ -69,7 +69,7 @@ document.getElementById("scanNFCButton").addEventListener("click", async () => {
                         const json = JSON.parse(data);
                         handleModule(json);
                     } catch (e) {
-                        log(`Error parsing JSON: ${e}`);
+                        log(`Error parsing JSON: ${e}. Passing through without change.`);
                     }
                 }
             };
@@ -83,6 +83,11 @@ document.getElementById("scanNFCButton").addEventListener("click", async () => {
 });
 
 function handleModule(json) {
+    if (!json || typeof json !== "object") {
+        log("No valid JSON data on NFC tag, passing through without change.");
+        return;
+    }
+
     if (json.action === "add") {
         if (json.module === "reverb") {
             const reverb = new Tone.Reverb(json.decay || 1.5).toDestination();
@@ -106,7 +111,7 @@ function handleModule(json) {
             log(`Distortion added: amount=${json.amount || 0.4}`);
         }
         else {
-            log(`Unknown module: ${json.module}`);
+            log(`Unknown module: ${json.module}. Passing through without change.`);
         }
     }
     else if (json.action === "clear") {
@@ -115,7 +120,7 @@ function handleModule(json) {
         log("Effect chain cleared.");
     }
     else {
-        log(`Unknown action: ${json.action}`);
+        log(`Unknown or missing action: ${json.action}. Passing through without change.`);
     }
 }
 
