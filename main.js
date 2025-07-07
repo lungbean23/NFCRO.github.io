@@ -1,7 +1,17 @@
 import { initLogger, log } from './modules/logger.js';
-import { initPlayer, playSample } from './modules/player.js';
+import { initPlayer, playSample, getCurrentSample } from './modules/player.js';
 import { handleModule } from './modules/effects.js';
 import { initNFC } from './modules/nfc.js';
+
+function refreshPlayback() {
+    const currentSample = getCurrentSample();
+    if (currentSample) {
+        playSample(currentSample);
+        log("Playback refreshed with updated effects.");
+    } else {
+        log("No sample is currently loaded; skipping refresh.");
+    }
+}
 
 window.addEventListener("DOMContentLoaded", () => {
     initLogger();
@@ -18,6 +28,9 @@ window.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("scanNFCButton").addEventListener("click", async () => {
-        await initNFC(handleModule);
+        await initNFC((json) => {
+            handleModule(json);
+            refreshPlayback();
+        });
     });
 });
