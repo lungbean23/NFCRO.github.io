@@ -3,21 +3,54 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>NFC Modular SPA</title>
+    <title>NFC Modular Sampler Rack</title>
 </head>
 <body>
-    <h1>NFC Modular Rack</h1>
+    <h1>NFC Modular Sampler Rack</h1>
 
-    <button id="startButton">Start Audio</button>
+    <label for="sampleSelect">Select Sample:</label>
+    <select id="sampleSelect">
+        <option value="https://cdn.freesound.org/previews/414/414209_5121236-lq.mp3">Ambient Loop</option>
+        <option value="https://cdn.freesound.org/previews/250/250629_4486188-lq.mp3">Drum Loop</option>
+    </select>
+    <br><br>
+
+    <button id="startButton">Start Audio Context</button>
+    <button id="playButton">Play Sample</button>
     <button id="scanNFCButton">Scan NFC</button>
 
     <pre id="status">Status: Idle</pre>
 
     <script src="https://unpkg.com/tone@next/build/Tone.js"></script>
     <script>
+let player;
+let effectChain = [];
+
 document.getElementById("startButton").addEventListener("click", async () => {
     await Tone.start();
     log("Tone.js AudioContext started.");
+});
+
+document.getElementById("playButton").addEventListener("click", async () => {
+    const selectedSample = document.getElementById("sampleSelect").value;
+    if (player) {
+        player.stop();
+        player.dispose();
+    }
+
+    player = new Tone.Player({
+        url: selectedSample,
+        autostart: true
+    });
+
+    let lastNode = player;
+    for (let effect of effectChain) {
+        lastNode.connect(effect);
+        lastNode = effect;
+    }
+    lastNode.connect(Tone.Destination);
+
+    log(`Playing sample: ${selectedSample}`);
 });
 
 document.getElementById("scanNFCButton").addEventListener("click", async () => {
@@ -32,7 +65,6 @@ document.getElementById("scanNFCButton").addEventListener("click", async () => {
                 for (const record of event.message.records) {
                     const data = decoder.decode(record.data);
                     log(`NFC Tag Read: ${data}`);
-
                     try {
                         const json = JSON.parse(data);
                         handleModule(json);
@@ -51,25 +83,46 @@ document.getElementById("scanNFCButton").addEventListener("click", async () => {
 });
 
 function handleModule(json) {
-    if (json.type === "oscillator") {
-        const freq = json.frequency || 440;
-        const waveform = json.waveform || "sine";
-        const osc = new Tone.Oscillator(freq, waveform).toDestination();
-        osc.start();
-        log(`Oscillator started: ${waveform} at ${freq}Hz`);
-
-        // For testing, stop after 5 seconds
-        setTimeout(() => {
-            osc.stop();
-            log(`Oscillator stopped.`);
-        }, 5000);
-    } else {
-        log(`Unknown module type: ${json.type}`);
+    if (json.action === "add") {
+        if (json.module === "reverb") {
+            const reverb = new Tone.Reverb(json.decay || 1.5).toDestination();
+            reverb.wet.value = json.wet || 0.5;
+            effectChain.push(reverb);
+            log(`Reverb added: decay=${json.decay || 1.5}, wet=${json.wet || 0.5}`);
+        }
+        else if (json.module === "filter") {
+            const filter = new Tone.Filter(json.frequency || 800, json.type || "lowpass").toDestination();
+            effectChain.push(filter);
+            log(`Filter added: freq=${json.frequency || 800}, type=${json.type || "lowpass"}`);
+        }
+        else if (json.module === "delay") {
+            const delay = new Tone.FeedbackDelay(json.delayTime || "8n", json.feedback || 0.5).toDestination();
+            effectChain.push(delay);
+            log(`Delay added: delayTime=${json.delayTime || "8n"}, feedback=${json.feedback || 0.5}`);
+        }
+        else if (json.module === "distortion") {
+            const distortion = new Tone.Distortion(json.amount || 0.4).toDestination();
+            effectChain.push(distortion);
+            log(`Distortion added: amount=${json.amount || 0.4}`);
+        }
+        else {
+            log(`Unknown module: ${json.module}`);
+        }
+    }
+    else if (json.action === "clear") {
+        effectChain.forEach(effect => effect.dispose());
+        effectChain = [];
+        log("Effect chain cleared.");
+    }
+    else {
+        log(`Unknown action: ${json.action}`);
     }
 }
 
 function log(msg) {
-    document.getElementById("status").textContent += `\n${msg}`;
+    const status = document.getElementById("status");
+    status.textContent += `\n${msg}`;
+    status.scrollTop = status.scrollHeight;
 }
     </script>
 </body>
